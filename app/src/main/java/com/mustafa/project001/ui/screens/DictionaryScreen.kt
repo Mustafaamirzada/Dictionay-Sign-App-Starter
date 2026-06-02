@@ -57,7 +57,7 @@ fun DictionaryScreen(
 
         ) {
             Text(
-                text = "Lexicon",
+                text = "Hela",
                 fontSize = 42.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.White,

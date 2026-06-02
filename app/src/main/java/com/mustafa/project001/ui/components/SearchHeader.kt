@@ -1,5 +1,6 @@
 package com.mustafa.project001.ui.components
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,6 +15,7 @@ import androidx.compose.material.Text
 import androidx.compose.material.TextFieldDefaults
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Sort
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.runtime.Composable
@@ -31,24 +33,27 @@ fun SearchHeader(
     textValue: TextFieldValue,
     onValueChange: (TextFieldValue) -> Unit,
     onBackClick: () -> Unit,
-    focusRequester: FocusRequester
+    focusRequester: FocusRequester,
+    onSortClick: () -> Unit,
+    isSorted: Boolean, // Current state value
+
 ) {
     Surface (
         color = Color.White,
-        elevation = 4.dp, // Adds a subtle shadow
-        shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp) // Rounded bottom corners
+        elevation = 4.dp,
     ) {
         Column (
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(bottom = 16.dp)
         ) {
-            // Row 1: Back Button and Page Title
             Row (
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 8.dp, start = 4.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .padding(top = 8.dp, start = 4.dp , end = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+
             ) {
                 IconButton(onClick = onBackClick) {
                     Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -58,9 +63,15 @@ fun SearchHeader(
                     style = MaterialTheme.typography.h6,
                     fontWeight = FontWeight.Bold
                 )
+                IconButton(onClick = onSortClick) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.Sort,
+                        contentDescription = "Sort",
+                        tint = if (isSorted) MaterialTheme.colors.primary else Color.Gray
+                    )
+                }
             }
 
-            // Row 2: The Search Field
             OutlinedTextField(
                 value = textValue,
                 onValueChange = onValueChange,

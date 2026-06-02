@@ -5,13 +5,18 @@ import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.flowOn
 
-// 1. THE SEARCH FLOW
 fun getDictionarySearchFlow(
     query: String,
-    dictionary: List<String>
+    dictionary: List<String>,
+    isSorted: Boolean
 ): Flow<List<String>> = flow {
-    if (query.isEmpty()) {
-        emit(emptyList())
+    // FIX: Emit all words when query is empty or just spaces
+    if (query.isBlank()) {
+        if (isSorted) {
+            emit(dictionary.sorted()) // Return alphabetically sorted list
+        } else {
+            emit(dictionary) // Return original unsorted list
+        }
         return@flow
     }
 
@@ -26,10 +31,13 @@ fun getDictionarySearchFlow(
         .sortedByDescending { it.second }
         .map { it.first }
 
-    emit(matches)
+    if (isSorted) {
+        emit(matches.sorted())
+    } else {
+        emit(matches)
+    }
 }.flowOn(Dispatchers.Default)
 
-// 2. THE HELPER FUNCTION (Move here if not resolving from other files)
 fun minEditDistance(word1: String, word2: String): Int {
     val m = word1.length
     val n = word2.length

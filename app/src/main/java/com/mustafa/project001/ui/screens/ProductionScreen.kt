@@ -10,6 +10,8 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -28,7 +30,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
-import com.mustafa.project001.R
+import com.mustafa.project001.data.VideoMap
 import com.mustafa.project001.utils.PersianTextProcessor
 import kotlin.collections.component1
 import kotlin.collections.component2
@@ -52,38 +54,12 @@ fun ProductionScreen() {
 fun SignLanguageApp() {
     val context = LocalContext.current
 
-    fun getVideoUri(resId: Int): String = "android.resource://${context.packageName}/$resId"
 
-    val videoMap = mapOf(
-        "احترام" to getVideoUri(R.raw.a),
-        "چطور" to getVideoUri(R.raw.b),
-        "خوشامدید" to getVideoUri(R.raw.c),
-        "کتاب" to getVideoUri(R.raw.book),
-        "تبریک" to getVideoUri(R.raw.congratulation),
-        "گوش" to getVideoUri(R.raw.ear),
-        "انگشتان" to getVideoUri(R.raw.finger),
-        "صمیمی" to getVideoUri(R.raw.frind),
-        "سیب" to getVideoUri(R.raw.apple),
-        "بایسیکل" to getVideoUri(R.raw.bicycle),
-        "تخته" to getVideoUri(R.raw.board),
-        "برادر" to getVideoUri(R.raw.brother),
-        "موتور" to getVideoUri(R.raw.car),
-        "دروازه" to getVideoUri(R.raw.door),
-        "خوردن" to getVideoUri(R.raw.eat),
-        "پدر" to getVideoUri(R.raw.father),
-        "انگور" to getVideoUri(R.raw.grape),
-        "دست" to getVideoUri(R.raw.hand),
-        "مادر" to getVideoUri(R.raw.mother),
-        "قلم" to getVideoUri(R.raw.pen),
-        "خواهر" to getVideoUri(R.raw.sester),
-        "ساعت" to getVideoUri(R.raw.watch),
-        "انار" to getVideoUri(R.raw.ponegranate),
-        "بوت" to getVideoUri(R.raw.shose),
-        "سپورت" to getVideoUri(R.raw.sport),
-        "درخت" to getVideoUri(R.raw.tree)
+    val VideoMap = VideoMap()
+
+    SearchScreenn(
+        videoMap = VideoMap
     )
-
-//    SearchScreen(videoMap = videoMap)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -230,10 +206,6 @@ fun SearchScreenn(videoMap: Map<String, String>) {
         Spacer(modifier = Modifier.height(30.dp))
 
 
-
-
-
-
         // Grid Title
         Text(
             text = "Vocabulary Library",
@@ -255,8 +227,8 @@ fun SearchScreenn(videoMap: Map<String, String>) {
             )
 
             Box(modifier = Modifier.height(300.dp)) {
-                androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
-                    columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(4),
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(4),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     modifier = Modifier.fillMaxSize()
@@ -331,100 +303,4 @@ fun WordVideoCardn(word: String, videoUri: String, onClick: () -> Unit) {
         )
     }
 }
-
-
-
-object PersianTextProcessorn {
-    // List of common Persian stop words
-    private val stopWords = setOf(
-        "از", "به", "در", "را", "با", "که", "این", "آن", "برای", "و", "اما",
-        "ولی", "اگر", "چون", "تا", "هر", "بود", "است", "شد", "نیز", "هم"
-    )
-
-    // Simple Stemming: Removes common suffixes
-    private val suffixes = listOf("تر", "ترین", "‌ها", "ها", "می‌", "انه", "یت" ,"ان")
-
-    fun processText(input: String): List<String> {
-        return input.trim()
-            .split("\\s+".toRegex()) // Tokenization
-            .map { it.lowercase() }
-            .filter { it !in stopWords } // Stop word removal
-            .map { stem(it) } // Stemming
-    }
-
-    private fun stem(word: String): String {
-        var currentWord = word
-        // Simple suffix stripping logic
-        suffixes.forEach { suffix ->
-            if (currentWord.endsWith(suffix) && currentWord.length > suffix.length) {
-                currentWord = currentWord.substring(0, currentWord.length - suffix.length)
-            }
-            if (currentWord.startsWith("می‌")) {
-                currentWord = currentWord.replace("می‌", "")
-            }
-        }
-        return currentWord
-    }
-}
-
-
-
-//fun WordVideoCard(word: String, videoUri: String, onClick: () -> Unit) {
-//    Column(
-//        horizontalAlignment = Alignment.CenterHorizontally,
-//        modifier = Modifier
-//            .padding(4.dp)
-//            // Add this import: import androidx.compose.foundation.clickable
-//            .clickable { onClick() }
-//    ) {
-//        Box(
-//            modifier = Modifier
-//                .aspectRatio(1f)
-//                .clip(RoundedCornerShape(12.dp))
-//                .background(Color.Black)
-//        ) {
-//            AndroidView(
-//                factory = { ctx ->
-//                    VideoView(ctx).apply {
-//                        setVideoPath(videoUri)
-//                        // This prevents the mini-videos from playing sound all at once
-//                        setOnPreparedListener { it.setVolume(0f, 0f) }
-//                    }
-//                },
-//                modifier = Modifier.fillMaxSize()
-//            )
-//            Icon(
-//                imageVector = Icons.Default.PlayArrow,
-//                contentDescription = null,
-//                tint = Color.White.copy(alpha = 0.5f),
-//                modifier = Modifier.size(16.dp).align(Alignment.Center)
-//            )
-//        }
-//        Text(
-//            text = word,
-//            style = MaterialTheme.typography.labelSmall,
-//            modifier = Modifier.padding(top = 4.dp),
-//            maxLines = 1
-//        )
-//    }
-//}
-//
-//Box(modifier = Modifier.height(500.dp)) {
-//    androidx.compose.foundation.lazy.grid.LazyVerticalGrid(
-//        columns = androidx.compose.foundation.lazy.grid.GridCells.Fixed(4),
-//        horizontalArrangement = Arrangement.spacedBy(8.dp),
-//        verticalArrangement = Arrangement.spacedBy(16.dp),
-//        modifier = Modifier.fillMaxSize()
-//    ) {
-//        videoMap.forEach { (word, uri) ->
-//            item {
-//                WordVideoCard(word = word, videoUri = uri) {
-//                    // When clicked, play this video in the main player
-//                    videoQueue = listOf(uri)
-//                    currentIndex = 0
-//                }
-//            }
-//        }
-//    }
-//}
 

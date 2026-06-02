@@ -1,4 +1,4 @@
-import android.util.Log
+import android.annotation.SuppressLint
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -17,14 +17,38 @@ import com.mustafa.project001.utils.getDictionarySearchFlow
 import java.net.URLEncoder
 import java.nio.charset.StandardCharsets
 
-@OptIn(ExperimentalMaterial3Api::class)
-
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.layout.onGloballyPositioned
+import com.mustafa.project001.data.EmojiMapTo
+import com.mustafa.project001.data.getDictionaryData
+//import com.mustafa.project001.data.EmojiMap
+import kotlinx.coroutines.launch
+import java.net.URLDecoder
+import kotlin.math.max
 
 @Composable
 fun SimilarWordCard(
     word: String,
     navController: NavHostController
 ) {
+    val decodedWord = remember(word) {
+        try {
+            URLDecoder.decode(word, "UTF-8")
+        } catch (e: Exception) {
+            word
+        }
+    }
+// CORRECT - use different variable names
+    val emojiMap = EmojiMapTo()  // This is the Map
+    val emojiRes: String? = emojiMap[decodedWord]  // This is the String result
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -49,13 +73,15 @@ fun SimilarWordCard(
                 )
             )
 
-            Text(
-                text = "→",
-                color = Color.LightGray,
-                fontSize = 20.sp
-            )
-        }
+            if (emojiRes != null) {
+                    Text(
+                        text = emojiRes,
+                        fontSize = 18.sp,
+                    )
+            }
 
+
+        }
         HorizontalDivider(
             modifier = Modifier.fillMaxWidth(),
             thickness = 1.dp,
@@ -64,78 +90,150 @@ fun SimilarWordCard(
     }
 }
 
+@Composable
+fun CustomScrollbarListContainer(
+    state: LazyListState,
+    color: Color,
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
+) {
+    var containerHeight by remember { mutableStateOf(1f) }
+    val coroutineScope = rememberCoroutineScope()
 
+    // Dynamically safely calculate scroll calculations
+    val layoutInfo = state.layoutInfo
+    val totalItemsCount = layoutInfo.totalItemsCount
+    val visibleItems = layoutInfo.visibleItemsInfo
+
+    var thumbTop = 0f
+    var finalThumbHeight = 0f
+    var remainingSpace = 0f
+    var maxScrollIndex = 1f
+    var itemHeight = 0f
+    val hasItems = totalItemsCount > 0 && visibleItems.isNotEmpty()
+
+    if (hasItems) {
+        val firstVisibleItem = visibleItems.first()
+        itemHeight = max(1f, firstVisibleItem.size.toFloat())
+        val totalSize = totalItemsCount.toFloat()
+        val estimatedTotalHeight = itemHeight * totalSize
+
+        val scrollOffset = state.firstVisibleItemScrollOffset.toFloat()
+        val firstItemProgress = scrollOffset / itemHeight
+        val currentScrollPosition = state.firstVisibleItemIndex.toFloat() + firstItemProgress
+
+        val thumbHeight = (containerHeight / estimatedTotalHeight) * containerHeight
+        finalThumbHeight = thumbHeight.coerceAtLeast(50f)
+
+        remainingSpace = max(1f, containerHeight - finalThumbHeight)
+        maxScrollIndex = max(1f, totalSize - (containerHeight / itemHeight))
+        thumbTop = ((currentScrollPosition / maxScrollIndex) * remainingSpace).coerceIn(0f, remainingSpace)
+    }
+
+    Box(
+        modifier = modifier
+            .onGloballyPositioned { coordinates ->
+                containerHeight = max(1f, coordinates.size.height.toFloat())
+            }
+            .drawWithContent {
+                drawContent()
+                if (hasItems) {
+                    drawRoundRect(
+                        color = color,
+                        topLeft = Offset(this.size.width - 8f, thumbTop),
+                        size = Size(8f, finalThumbHeight),
+                        cornerRadius = CornerRadius(4f, 4f)
+                    )
+                }
+            }
+            // Pointer key is isolated to the actual text state total item structure safely
+            .pointerInput(totalItemsCount, remainingSpace, maxScrollIndex, itemHeight) {
+                if (!hasItems || remainingSpace <= 0f) return@pointerInput
+                detectDragGestures { change, dragAmount ->
+                    change.consume()
+
+                    // Live gesture mapping calculations protected against out of bounds index crashes
+                    val newThumbTop = (thumbTop + dragAmount.y).coerceIn(0f, remainingSpace)
+                    val targetScrollIndexFloat = (newThumbTop / remainingSpace) * maxScrollIndex
+                    val targetIndex = targetScrollIndexFloat.toInt().coerceIn(0, totalItemsCount - 1)
+                    val targetOffset = ((targetScrollIndexFloat - targetIndex) * itemHeight).toInt()
+
+                    coroutineScope.launch {
+                        state.scrollToItem(index = targetIndex, scrollOffset = targetOffset)
+                    }
+                }
+            }
+    ) {
+        content()
+    }
+}
+
+@SuppressLint("RememberReturnType")
 @Composable
 fun DictionarySearchRow(
     text: TextFieldValue,
-    navController: NavHostController
+    navController: NavHostController,
+    isSorted: Boolean
 ) {
-    val dictionary = remember {
-        listOf(
-            "خداوند ج", "محمد ص", "پیغمبر", "قرانکریم", "ابوبکرصدیق", "مسلمان","دین", "روح", "تقوا", "دعا", "ختم قران شریف", "سوگند", "بهشت", "تورات", "فاتحه", "تیمم",
-            "مدینه", "سوره", "حاجی", "مقتدی", "قاری", "خیرات","برکت", "فرشته", "جای نماز", "ذکات", "نمازجنازه", "تعمت", "آیت شریف", "جماعت", "سجده", "نماز",
-            "رکوع", "تراویح", "تبلیغ", "رمضان", "نامشروع", "شهید","سنت", "نصیب", "گناه", "عیسویت", "نکاح", "کفاره روزه", "حلال", "حرام", "انجیل شریف", "افتار",
-            "حق", "أذان", "جهاد", "بنده", "اسلام", "عبادت", "ایمان", "جبرائیل", "عیسوی", "فرض", "کفار", "غنیمت", "آخرت", "وضو", "رکعت", "تسبیح", 
-            "عیدقربان", "عشر", "نمازقضا", "ثواب", "دوزخ", "اصحاب", "فدیه روزه", "اجر", "خوش آمدید", "چطورهستی", "اسم", 
-            "بی‌ادب", "احترام", "سلام", "محفل", "فرزندی", "بلی", "کارت", "تبریک", "سلام", "صمیمی", "خداحافظ", "تشکر", "شکر", "خانم", "مشکل", "پست", "سالگره", "معلومات", "نوبت",
-             "تخلص", "فرق نمی‌کند", "باادب", "ببخشید", "معذرت خواستن", "دوست", "عید", "اجازه", "تیم", "بزرگان", "مجرد", "رسم رواج", "رفتار", "آقا",
-              "همسایه", "راز ونیاز", "نخیر", "بادار", "مقام", "نام", "بی اتفاقی", "مهمان", "آواره", "علاقه", "دوستت دارم", "ملاقات", "خوش اخلاق", "بداخلاق",
-              "عمر", "به من چی", "آفرین", "برادر", "مرد", "پدر", "طفل", "فامیل", "دوگانگی", "طفل شیرخوار", "همباق", "پسر", "کاکا", "خسر", "کاکا", "خشو", "اطفال", 
-              "خواهرزاده", "طفل", "اعضا", "پدرکلان", "خسربره", "خانم", "خواهر", "مادر", "کلان", "مادر", "دخترم", "دختر", "شوهر", "پسرم", "بیوه", "برادرزاده", "خاله", "والدین", 
-              "ماما", "داماد", "زن", "نامزدشدن", "نامزد", "اقارب", "عروس", "خیاشنه", "مجرد", 
+    val dictionary = remember { getDictionaryData() }
+    val listState = rememberLazyListState()
 
-              "زبان", "گوش", "آبرو", "ابرو","دست", "دهن", "انگشتان دست", "عضله", "بروت", "رویش", "شش", "ناخن", "ساق پا", "کف پا", "قفس سینه", "چهره", "زنخ",
-               "اعصاب", "کف دست", "دندان", "قبرغه", "چشم", "آرنج", "گلو", "قلب", "معده", "بنددست", "مغز", "پاشنه","پا", "گرده", "روده", "قد", "بغل", "مشت",
-                "شانه", "زانو", "اسکلت", "بینی", "موی", "پیشانی", "مژه", "جمجمه", "سر", "جلد", "لب", "لب", "ورید", "جیگر", "ران", "ستون فقرات", "کمر", "بجلک پا", "بدن", "انگشت", "پشت", 
-            
-            "زنجیرک", "جیب", "جراب", "چپلک",  "یونیفرم", "ساعت جیبی", "کلاه", "بوت", "پتو", 
-            "صابون", "ناخن گیر", "عطر", "خینه", "روغن موی", "شانه موی", "آستین", "کرتی", "لباس سپورتی", "دکمه", "چپن لباس", "عینک",
-                "انگشتانه", "زیر پیراهنی", "لاشتک", "لبسیرین", "گردنبند", "گل موی", "انگشتر", "دستبند", "گوشواره", "پیراهن", "کریم", "واسکت", "بیگدی", "جاکت", "یخن قاق",
-                 "ساری", "کمربند", "تنبان", "چادری", "دستار", "چپلی", "پیشبند", "شامپو", "بندتنبان", "شال", "طلا", "دستکول", "واسلین", "نیکتایی", "مهره", "دستکش", "موزه", 
-                 "بالاپوش", "الماس", "دامن", "پتلولون", "ساعت دستی",  "چادر", "لاجورد", "دستمال بینی", "لباس", 
-                 
-                 "بطری خورد", "اشتوپ", "داش", "آبگرمی", "تیل", "قالین", "ایرکندیشن", "ویدیو", "بخاری برقی", "ویدیو", 
-                 "تلک", "شمع", "زینه", "قفل", "کاغذ تشناب", "بیک", "گلدان", "آینه", "کرایه", "لایتر", "پل ریش", "دیوار", "اتاق", "خانه", "عکس", "بکس جیبی", "تنور", "پیمانه", "کلید",
-                  "ساعت دیواری", "فرش", "پرده", "فرش", "پرده", "گلن", "دروازه", "چوکی", "سوزن", "کلکین", "شیشه", "جک",  "چمگک","خاک انداز", "جاروب", "یخچال", "باطله دانی", "نمد", "تیل خاک",
-                  "بوجی", "دسترخوان", "دایره","اریکین", "آشپزخانه", "میتر", "اتاق خواب", "پمبه", "مهمانخانه", "سطل", "آفتابه", "روک میز", "چراغ دستی", "سقف", "بام", "تخت خواب", "رادیو", "نل آب",
-                "دودکش", "چاه", "گیس", "چپرکت", "گوگرد", "ساکت", "دستشویی", "میز", "جوال دوز", "الماری","بمبه", "کندو", "کارد", "أبکشی", "پودر", "روجایی", "چاقو", "گهواره", "بوتل", "کوزه", "نمکدان",
-                 "دوشک", "کاسه", "تشناب", "چلوصاف", "کفگیر", "میوه‌دانی", "غربال", "دیگ", "پطنوس", "قندانی", "لگن", "قیف", "زیرمیزی", "آلبوم", "لحاف", "روی پاک", "دست پاک", "تصویر",
-                "سرمیزی", "سیم", "کست", "صندلی", "خریطه", "کوچ وچوکی", "بخاری دیزلی", "اتو", "گروپ", "عصا", "برس بوت", "برس دندان", "چتری", "بالشت", "کوتبند", 
-        )
+    val searchResults by produceState<List<String>>(
+        initialValue = emptyList(),
+        text.text,
+        isSorted
+    ) {
+        getDictionarySearchFlow(text.text, dictionary, isSorted).collect { value = it }
     }
-
-    // 1. Get results from the Flow (results are List<String>)
-    val searchResults by produceState<List<String>>(initialValue = emptyList(), text.text) {
-        getDictionarySearchFlow(text.text, dictionary).collect { value = it }
+    LaunchedEffect(text.text) {
+        if (searchResults.isNotEmpty()) {
+            listState.scrollToItem(0)
+        }
     }
-//    DictionarySearchExample(navController= navController)
 
     Column(
         modifier = Modifier
-            .fillMaxWidth()
+            .fillMaxSize()
             .padding(horizontal = 16.dp, vertical = 8.dp)
     ) {
-        // Show results count
-        if (text.text.isNotEmpty()) {
+        // Header Section
+        if (text.text.isNotBlank()) {
             Text(
                 text = "🔍 Found ${searchResults.size} similar word(s)",
                 style = MaterialTheme.typography.bodySmall,
                 color = Color.Gray,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
+        } else {
+            Text(
+                text = "📖 All Dictionary Words (${searchResults.size})",
+                style = MaterialTheme.typography.bodySmall,
+                color = Color.Gray,
+                modifier = Modifier.padding(bottom = 8.dp)
+            )
         }
 
-        // 2. Display search results
         if (searchResults.isNotEmpty()) {
-            LazyColumn(
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.heightIn(max = 400.dp) // Prevents infinite height issues
+            CustomScrollbarListContainer(
+                state = listState,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
             ) {
-                items(searchResults) { word -> // 'word' is a String here
-                    SimilarWordCard(
-                        word = word,
-                        navController = navController
-                    )
+                LazyColumn(
+                    state = listState,
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(end = 16.dp) // Clearance gap preventing text overlap
+                ) {
+                    items(searchResults) { word ->
+                        SimilarWordCard(
+                            word = word,
+                            navController = navController
+                        )
+                    }
                 }
             }
         } else if (text.text.isNotEmpty()) {
@@ -153,83 +251,3 @@ fun DictionarySearchRow(
         }
     }
 }
-
-// ========== 6. EXTRA: VISUAL SIMILARITY MATRIX ==========
-@Composable
-fun VisualSimilarityMatrix(input: String) {
-    val dictionary = listOf("سلام", "خدا", "حافظ", "عشق")
-
-    // Collect similarity data from the flow
-    // Note: This requires getDictionarySearchFlow to return a list of words or objects with scores
-    val searchResults by produceState<List<String>>(initialValue = emptyList(), input) {
-        getDictionarySearchFlow(input, dictionary).collect { value = it }
-    }
-
-    Card(
-        modifier = Modifier.fillMaxWidth().padding(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F5F5))
-    ) {
-        Column(modifier = Modifier.padding(16.dp)) {
-
-            searchResults.forEach { word ->
-                // Since getDictionarySearchFlow already filtered these,
-                // we just display them.
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text(text = word)
-                    Text(text = "Match Found", color = Color.Green)
-                }
-            }
-        }
-    }
-}
-
-
-
-//@Composable
-//fun DictionarySearchExample(
-//    navController: NavHostController
-//) {
-//    var textFieldValue by remember { mutableStateOf(TextFieldValue("")) }
-//
-//    Column {
-//        // Text Field
-//        OutlinedTextField(
-//            value = textFieldValue,
-//            onValueChange = { textFieldValue = it },
-//            label = { Text("Search in dictionary") },
-//            placeholder = { Text("Type a word...") },
-//            modifier = Modifier
-//                .fillMaxWidth()
-//                .padding(16.dp),
-//            colors = OutlinedTextFieldDefaults.colors(
-//                // Merge all color definitions here
-//                focusedTextColor = Color.Black,
-//                unfocusedTextColor = Color.Black,
-//                cursorColor = Color.Black,
-//                // Using your preferred Black borders
-//                focusedBorderColor = Color.Black,
-//                unfocusedBorderColor = Color.Black.copy(alpha = 0.5f),
-//                // Icon and Placeholder colors
-//                focusedLeadingIconColor = Color.Black,
-//                unfocusedLeadingIconColor = Color.Black,
-//                focusedTrailingIconColor = Color.Black,
-//                unfocusedTrailingIconColor = Color.Black,
-//                focusedPlaceholderColor = Color.Black.copy(alpha = 0.7f),
-//                unfocusedPlaceholderColor = Color.Black.copy(alpha = 0.7f)
-//            ),
-//            singleLine = false,
-//            maxLines = 3
-//        )
-//
-//        // Dictionary Search Results (visual)
-//        DictionarySearchRow(text = textFieldValue, navController = navController)
-//
-//        // Visual similarity visualization
-//        if (textFieldValue.text.isNotEmpty()) {
-//            VisualSimilarityMatrix(textFieldValue.text)
-//        }
-//    }
-//}

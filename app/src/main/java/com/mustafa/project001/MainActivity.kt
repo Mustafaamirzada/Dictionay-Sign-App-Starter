@@ -26,6 +26,7 @@ import com.mustafa.project001.ui.components.SearchScreen
 import com.mustafa.project001.ui.screens.CameraScreen
 import com.mustafa.project001.ui.screens.DictionaryScreen
 import com.mustafa.project001.ui.screens.HomeScreen
+import com.mustafa.project001.ui.screens.ProductionScreen
 import com.mustafa.project001.ui.screens.SingleWordSign
 import java.net.URLDecoder
 
@@ -83,6 +84,8 @@ fun MainScreen() {
                     composable("home") { HomeScreen() }
                     // Define the Camera Destination Composable
                     composable("camera") { CameraScreen() }
+                    composable("production") { ProductionScreen() }
+
 
                     composable("dictionary") { DictionaryScreen(
                         navController = navController
