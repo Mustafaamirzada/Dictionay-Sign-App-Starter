@@ -1,6 +1,6 @@
 # Sign Language Dictionary App 🤟
 
-**Hela** is an Android application that makes sign language accessible to the Deaf and hard-of-hearing community in Afghanistan. It provides a searchable Persian/Dari sign language dictionary where every word is illustrated with a short sign-language video, and it can even translate spoken or typed Persian sentences into a sequence of sign videos in real time.
+This is an Android application that makes sign language accessible to the Deaf and hard-of-hearing community in Afghanistan. It provides a searchable Persian/Dari sign language dictionary where every word is illustrated with a short sign-language video, and it can even translate spoken or typed Persian sentences into a sequence of sign videos in real time.
 
 > The app ships with **1,397 dictionary words** and **2,000+ bundled sign-language videos**, organized across categories such as religion, family, body organs, clothing, household items, fruits, school, animals, nature, transportation, cities, emotions, verbs, and more.
 
@@ -114,7 +114,6 @@ VideoView plays tokens sequentially as a signed sentence
 | **Coil Compose `2.5.0`** | Async image loading |
 | **Material Icons Extended** | Extended icon set for the UI |
 | **AndroidX Core KTX `1.17.0` / Activity Compose `1.12.3`** | Core Android + Compose Activity integration |
-| **Google Ads Mobile SDK `1.0.1`** | Ad support (declared in version catalog) |
 | **Android Speech Recognition (`RecognizerIntent`)** | Voice input for the Production screen (platform API) |
 
 Build tooling: **AGP 8.13.2**, **Gradle version catalog** (`gradle/libs.versions.toml`), `compileSdk 36`, `minSdk 24`, `targetSdk 35`, JVM target 11.
@@ -156,7 +155,3 @@ Open the project in Android Studio and press **Run ▶** to launch on a device.
 - The camera pipeline (capture → resize to 224×224 → save to internal storage) is prepared for a future **on-device sign-recognition ML model**.
 
 ---
-
-## 📄 License
-
-This project is developed to support the Afghan Deaf community. Add your license of choice here.
